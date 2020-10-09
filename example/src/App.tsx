@@ -1,25 +1,40 @@
 import React from 'react'
-
 import 'react-api-client/dist/index.css'
 import { ApiClient } from 'react-api-client/dist/index'
-import { ApiResult } from '../../src'
+import { BaseApiResult } from 'react-api-client/dist/index'
 
-const client = new ApiClient({
-  baseUrl: "https://hastebin.com",
-  extraSettings: {
-    mode: 'no-cors'
-  }
+interface ApiResult extends BaseApiResult {
+  date?: string
+}
+
+const client = new ApiClient<ApiResult>({
+  baseUrl: "http://localhost:3001",
+  responseHandler: (data) => ({
+    hasError: false,
+    errorMessage: "",
+    date: data["date"]
+  }),
+  errorHandler: (e) => ({
+    hasError: true,
+    errorMessage: e.message
+  })
 });
 
-window["x"] = client;
+window["apiClient"] = client;
 
 const App = () => {
-  console.log(client.Loader);
-  return (<client.Loader consumer={true} endpoint={"/raw/obeyujudoj.css"}>
-    {(result: ApiResult) => (
-      <>{JSON.stringify(result)}</>
-    )}
-  </client.Loader>)
+  return (
+    <div>
+      <client.Loader consumer={true} endpoint={"/okay"}>
+        {(result: ApiResult, reloadData: () => {}) => (
+          <>
+            {JSON.stringify(result)}
+            <button onClick={() => reloadData()}>Reload</button>
+          </>
+        )}
+      </client.Loader>
+    </div>
+  )
 }
 
 export default App

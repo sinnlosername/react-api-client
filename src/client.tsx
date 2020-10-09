@@ -108,7 +108,7 @@ type CallFunctionWithBody<TApiResult extends BaseApiResult> = (endpoint: string,
 type UseCallFunctionWithoutBody<TApiResult extends BaseApiResult> = (endpoint: string) => UseCallFunctionReturnType<TApiResult>;
 type UseCallFunctionWithBody<TApiResult extends BaseApiResult> = (endpoint: string, requestData: object) => UseCallFunctionReturnType<TApiResult>;
 
-type ReloadFunction = () => {}
+export type ReloadFunction = () => {}
 type UseCallFunctionReturnType<TApiResult extends BaseApiResult> = [TApiResult, false, ReloadFunction] | [null, true, ReloadFunction];
 
 export interface BaseApiResult {

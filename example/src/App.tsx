@@ -1,7 +1,7 @@
 import React from 'react'
 import 'react-api-client/dist/index.css'
 import { ApiClient } from 'react-api-client/dist/index'
-import { BaseApiResult } from 'react-api-client/dist/index'
+import { BaseApiResult, ReloadFunction } from 'react-api-client/dist/index'
 
 interface ApiResult extends BaseApiResult {
   date?: string
@@ -26,7 +26,7 @@ const App = () => {
   return (
     <div>
       <client.Loader consumer={true} endpoint={"/okay"}>
-        {(result: ApiResult, reloadData: () => {}) => (
+        {(result: ApiResult, reloadData: ReloadFunction) => (
           <>
             {JSON.stringify(result)}
             <button onClick={() => reloadData()}>Reload</button>

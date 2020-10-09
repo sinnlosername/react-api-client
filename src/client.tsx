@@ -7,29 +7,26 @@ import {
   ApiLoaderPropsNoClient
 } from './Loader'
 
-export interface ApiClientOptions {
+export interface ApiClientOptions<TApiResult extends BaseApiResult> {
   baseUrl: string
 
-  hasErrorChecker?: (data: object) => boolean,
-  errorExtractor?: (data: object) => string | undefined,
-  errorCodeExtractor?: (data: object) => string | undefined,
+  responseHandler: (data: object) => TApiResult
+  errorHandler: (error: Error) => TApiResult
 
   loaderCreateLoading?: ApiLoaderCreateLoadingFunction,
-  loaderCreateError?: ApiLoaderCreateErrorFunction,
+  loaderCreateError?: ApiLoaderCreateErrorFunction<TApiResult>,
 
   extraSettings?: Partial<RequestInit>
 }
 
-export class ApiClient {
-  options: ApiClientOptions
+export class ApiClient<TApiResult extends BaseApiResult> {
+  options: ApiClientOptions<TApiResult>
 
-  constructor(options: ApiClientOptions) {
+  constructor(options: ApiClientOptions<TApiResult>) {
     assignIfNull(options, {
-      hasErrorChecker: (data: object) => data["status"] === "error",
-      errorExtractor: (data: object) => data["error"] as string ?? undefined,
-      errorCodeExtractor: (data: object) => data["errorCode"] as string ?? undefined,
+
       extraSettings: {}
-    } as Partial<ApiClientOptions>);
+    } as Partial<ApiClientOptions<TApiResult>>);
 
     this.options = options;
 
@@ -38,96 +35,83 @@ export class ApiClient {
 
     ["post", "put", "patch", "delete"].forEach(method => {
       this[method] = ((endpoint, requestData) =>
-        this.call(method, endpoint, requestData)) as CallFunctionWithBody;
+        this.call(method, endpoint, requestData)) as CallFunctionWithBody<TApiResult>;
       this["use" + firstUp(method)] = ((endpoint, requestData) =>
-        this.useCall(method, endpoint, requestData)) as UseCallFunctionWithBody;
+        this.useCall(method, endpoint, requestData)) as UseCallFunctionWithBody<TApiResult>;
     })
 
-    this.Loader = (props: ApiLoaderPropsNoClient) => {
+    this.Loader = (props: ApiLoaderPropsNoClient<TApiResult>) => {
       assignIfNull(props, {
-        createLoading: props.createLoading,
-        createError: props.createError
-      } as Partial<ApiLoaderPropsNoClient>);
+        createLoading: this.options.loaderCreateLoading,
+        createError: this.options.loaderCreateLoading
+      } as Partial<ApiLoaderPropsNoClient<TApiResult>>);
 
       return (<ApiLoader client={this} {...props} />)
     }
-
-
-    console.log("LOADER: " + this.Loader)
   }
 
-  Loader: FunctionComponent<ApiLoaderPropsNoClient>
+  Loader: FunctionComponent<ApiLoaderPropsNoClient<TApiResult>>
 
-  get: CallFunctionWithoutBody
-  post: CallFunctionWithBody
-  put: CallFunctionWithBody
-  patch: CallFunctionWithBody
-  delete: CallFunctionWithBody
+  get: CallFunctionWithoutBody<TApiResult>
+  post: CallFunctionWithBody<TApiResult>
+  put: CallFunctionWithBody<TApiResult>
+  patch: CallFunctionWithBody<TApiResult>
+  delete: CallFunctionWithBody<TApiResult>
 
-  useGet: UseCallFunctionWithoutBody
-  usePost: UseCallFunctionWithBody
-  usePut: UseCallFunctionWithBody
-  usePatch: UseCallFunctionWithBody
-  useDelete: UseCallFunctionWithBody
+  useGet: UseCallFunctionWithoutBody<TApiResult>
+  usePost: UseCallFunctionWithBody<TApiResult>
+  usePut: UseCallFunctionWithBody<TApiResult>
+  usePatch: UseCallFunctionWithBody<TApiResult>
+  useDelete: UseCallFunctionWithBody<TApiResult>
 
-  useCall(method: string, endpoint: string, requestData?: object): UseCallFunctionReturnType {
-    const [unmounted, setUnmounted] = useState(false);
-    const [result, setResult] = useState(null as ApiResult | null);
+  useCall(method: string, endpoint: string, requestData?: object): UseCallFunctionReturnType<TApiResult> {
+    const [loadCounter, setLoadCounter] = useState(0);
+    const [result, setResult] = useState(null as TApiResult | null);
 
     useEffect(() => {
+      let unmounted = false;
+
       this.call(method, endpoint, requestData).then(callResult => {
         if (unmounted) return;
         setResult(callResult);
       });
 
-      return () => setUnmounted(true);
-    }, [""])
+      return () => {
+        unmounted = true;
+      }
+    }, [loadCounter])
 
-    return [result, result == null] as UseCallFunctionReturnType;
+    return [
+      result,
+      result == null,
+      () => setLoadCounter(loadCounter + 1)
+    ] as UseCallFunctionReturnType<TApiResult>;
   }
 
-  async call(method: string, endpoint: string, requestData?: object) : Promise<ApiResult> {
+  async call(method: string, endpoint: string, requestData?: object) : Promise<TApiResult> {
     try {
-      const data = await fetch(this.options.baseUrl + endpoint, {
+      return await fetch(this.options.baseUrl + endpoint, {
         method,
         body: JSON.stringify(requestData),
         ...this.options.extraSettings
-      }).then(response => response.json());
-
-      if (this.options.hasErrorChecker?.(data)) {
-        return {
-          data,
-          hasError: true,
-          errorCode: this.options.errorCodeExtractor?.(data),
-          error: this.options.errorExtractor?.(data)
-        }
-      } else {
-        return {
-          hasError: false,
-          data
-        }
-      }
+      }).then(response => response.json())
+        .then(data => this.options.responseHandler(data))
     } catch (e) {
-      return {
-        data: null,
-        hasError: true,
-        error: `Request error - ${e.message}`,
-        errorCode: "REQUEST_FAILED"
-      }
+      return this.options.errorHandler(e);
     }
   }
 }
-type CallFunctionWithoutBody = (endpoint: string) => Promise<ApiResult>;
 
-type CallFunctionWithBody = (endpoint: string, requestData: object) => Promise<ApiResult>;
-type UseCallFunctionReturnType = [ApiResult, false] | [null, true];
-type UseCallFunctionWithoutBody = (endpoint: string) => UseCallFunctionReturnType;
+type CallFunctionWithoutBody<TApiResult extends BaseApiResult> = (endpoint: string) => Promise<TApiResult>;
+type CallFunctionWithBody<TApiResult extends BaseApiResult> = (endpoint: string, requestData: object) => Promise<TApiResult>;
 
-type UseCallFunctionWithBody = (endpoint: string, requestData: object) => UseCallFunctionReturnType;
+type UseCallFunctionWithoutBody<TApiResult extends BaseApiResult> = (endpoint: string) => UseCallFunctionReturnType<TApiResult>;
+type UseCallFunctionWithBody<TApiResult extends BaseApiResult> = (endpoint: string, requestData: object) => UseCallFunctionReturnType<TApiResult>;
 
-export interface ApiResult {
-  data: object | null,
+type ReloadFunction = () => {}
+type UseCallFunctionReturnType<TApiResult extends BaseApiResult> = [TApiResult, false, ReloadFunction] | [null, true, ReloadFunction];
+
+export interface BaseApiResult {
   hasError: boolean,
-  errorCode?: string,
-  error?: string
+  errorMessage: string
 }

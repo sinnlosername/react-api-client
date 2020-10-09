@@ -12,8 +12,7 @@ export class ApiClient<TApiResult extends BaseApiResult> {
 
   constructor(options: ApiClientOptions<TApiResult>) {
     assignIfNull(options, {
-
-      extraSettings: {}
+      fetchOptions: {}
     } as Partial<ApiClientOptions<TApiResult>>);
 
     this.options = options;
@@ -81,7 +80,7 @@ export class ApiClient<TApiResult extends BaseApiResult> {
       return await fetch(this.options.baseUrl + endpoint, {
         method,
         body: JSON.stringify(requestData),
-        ...this.options.extraSettings
+        ...this.options.fetchOptions
       }).then(response => {
         return response.json().then(data => ({
           statusCode: response.status,
@@ -110,7 +109,7 @@ export interface ApiClientOptions<TApiResult extends BaseApiResult> {
   loaderCreateLoading?: ApiLoaderCreateLoadingFunction,
   loaderCreateError?: ApiLoaderCreateErrorFunction<TApiResult>,
 
-  extraSettings?: Partial<RequestInit>
+  fetchOptions?: Partial<RequestInit>
 }
 
 type CallFunctionWithoutBody<TApiResult extends BaseApiResult> = (endpoint: string) => Promise<TApiResult>;

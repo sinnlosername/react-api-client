@@ -113,5 +113,5 @@ type UseCallFunctionReturnType<TApiResult extends BaseApiResult> = [TApiResult, 
 
 export interface BaseApiResult {
   hasError: boolean,
-  errorMessage: string
+  errorMessage?: string
 }

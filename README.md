@@ -34,18 +34,17 @@ const client = new ApiClient<ApiResult>({
         errorMessage: data.error,
         /* Extract additional error information from data here */
       }
-    } else {
-      return {
-        hasError: false,
-        /* Extract additional information from data here */
-      }
+    }
+
+    return {
+      hasError: false
     }
   },
   errorHandler: (e) => ({ // Handle an error while performing a request
     hasError: true,
     errorMessage: e.message
   }),
-  extraSettings: {
+  fetchOptions: {
     /* Add extra options for the fetch() method here */
   }
 });

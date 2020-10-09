@@ -7,18 +7,6 @@ import {
   ApiLoaderPropsNoClient
 } from './Loader'
 
-export interface ApiClientOptions<TApiResult extends BaseApiResult> {
-  baseUrl: string
-
-  responseHandler: (data: object) => TApiResult
-  errorHandler: (error: Error) => TApiResult
-
-  loaderCreateLoading?: ApiLoaderCreateLoadingFunction,
-  loaderCreateError?: ApiLoaderCreateErrorFunction<TApiResult>,
-
-  extraSettings?: Partial<RequestInit>
-}
-
 export class ApiClient<TApiResult extends BaseApiResult> {
   options: ApiClientOptions<TApiResult>
 
@@ -94,12 +82,35 @@ export class ApiClient<TApiResult extends BaseApiResult> {
         method,
         body: JSON.stringify(requestData),
         ...this.options.extraSettings
-      }).then(response => response.json())
-        .then(data => this.options.responseHandler(data))
+      }).then(response => {
+        return response.json().then(data => ({
+          statusCode: response.status,
+          data
+        }))
+      }).then(({ statusCode, data }) => {
+        return Object.assign({
+          data,
+          statusCode
+        }, this.options.responseHandler(data)) as TApiResult
+      })
     } catch (e) {
-      return this.options.errorHandler(e);
+      return Object.assign({
+        data: null
+      }, this.options.errorHandler(e)) as TApiResult;
     }
   }
+}
+
+export interface ApiClientOptions<TApiResult extends BaseApiResult> {
+  baseUrl: string
+
+  responseHandler: (data: object) => ApiResultWithoutRaw<TApiResult>
+  errorHandler: (error: Error) => ApiResultWithoutRaw<TApiResult>
+
+  loaderCreateLoading?: ApiLoaderCreateLoadingFunction,
+  loaderCreateError?: ApiLoaderCreateErrorFunction<TApiResult>,
+
+  extraSettings?: Partial<RequestInit>
 }
 
 type CallFunctionWithoutBody<TApiResult extends BaseApiResult> = (endpoint: string) => Promise<TApiResult>;
@@ -111,7 +122,14 @@ type UseCallFunctionWithBody<TApiResult extends BaseApiResult> = (endpoint: stri
 export type ReloadFunction = () => {}
 type UseCallFunctionReturnType<TApiResult extends BaseApiResult> = [TApiResult, false, ReloadFunction] | [null, true, ReloadFunction];
 
-export interface BaseApiResult {
+export type ApiResultWithoutRaw<TApiResult extends BaseApiResult> = Omit<TApiResult, keyof RawApiResult>;
+
+interface RawApiResult {
+  statusCode: number | null
+  data: any | null,
+}
+
+export interface BaseApiResult extends RawApiResult {
   hasError: boolean,
   errorMessage?: string
 }

@@ -26,9 +26,12 @@ const App = () => {
   return (
     <div>
       <client.Loader consumer={true} endpoint={"/okay"}>
-        {(result: ApiResult, reloadData: ReloadFunction) => (
+        {({data: {
+          date
+        }}: ApiResult, reloadData: ReloadFunction) => (
           <>
-            {JSON.stringify(result)}
+            {date}
+            <br />
             <button onClick={() => reloadData()}>Reload</button>
           </>
         )}

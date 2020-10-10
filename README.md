@@ -54,7 +54,7 @@ result = await client.get("/");
 result = await client.post("/", {});
 ```
 
-Send a request from a component
+Send a request as a state
 ```tsx
 function MyComponent() {
   const [
@@ -65,6 +65,24 @@ function MyComponent() {
 
   return (
     <span>{loading ? "Loading..." : JSON.stringify(result)}</span>
+  );
+}
+```
+
+Send a request with a state
+```tsx
+function MyComponent() {
+  const [
+    handle,  /* The request state handle - pass this to all api calls */
+    loading, /* Indicates if the request is loading or not */,
+    result   /* The request result or null, if there was no result yet */
+  ] = client.useRequestState();
+
+  return (
+    <div>
+      <span>{loading ? "Loading..." : JSON.stringify(result)}</span><br />
+      <button onClick={() => client.get("/", handle)}>Send request</button>
+    </div>
   );
 }
 ```

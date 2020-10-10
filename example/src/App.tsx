@@ -24,6 +24,15 @@ window["apiClient"] = client;
 
 const App = () => {
   return (
+    <>
+      <Test1 />
+      <Test2 />
+    </>
+  )
+}
+
+const Test1 = () => {
+  return (
     <div>
       <client.Loader consumer={true} endpoint={"/okay"}>
         {({data: {
@@ -36,6 +45,21 @@ const App = () => {
           </>
         )}
       </client.Loader>
+    </div>
+  )
+}
+
+const Test2 = () => {
+  const {handle, loading, result} = client.useRequestState()
+
+  return (
+    <div>
+      {JSON.stringify(handle)}<br />
+      {JSON.stringify(loading)}<br />
+      {JSON.stringify(result)}<br />
+      <button onClick={() => {
+        client.get("/okay?delay=2", handle)
+      }}>Load</button>
     </div>
   )
 }

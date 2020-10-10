@@ -8,6 +8,14 @@ app.use((req, res, next) => {
   next();
 });
 
+app.use((req, res, next) => {
+  if (req.query["delay"] != null) {
+    setTimeout(() => next(), parseInt(req.query["delay"].toString()) * 1000);
+  } else {
+    next();
+  }
+});
+
 ["get", "post", "put", "patch", "delete"].forEach(method => {
   app[method](`/okay`, (req, res) => res.send({status: "success", date: new Date().toString()}));
   app[method](`/error`, (req, res) => res.send({status: "error", date: new Date().toString()}));

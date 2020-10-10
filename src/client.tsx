@@ -51,7 +51,7 @@ export class ApiClient<TApiResult extends BaseApiResult> {
   usePatch: UseCallFunctionWithBody<TApiResult>
   useDelete: UseCallFunctionWithBody<TApiResult>
 
-  useCall(method: string, endpoint: string, requestData?: object): UseCallFunctionReturnType<TApiResult> {
+  private useCall(method: string, endpoint: string, requestData?: object): UseCallFunctionReturnType<TApiResult> {
     const [loadCounter, setLoadCounter] = useState(0);
     const [result, setResult] = useState(null as TApiResult | null);
 
@@ -75,7 +75,7 @@ export class ApiClient<TApiResult extends BaseApiResult> {
     ] as UseCallFunctionReturnType<TApiResult>;
   }
 
-  async call(method: string, endpoint: string, requestData?: object,
+  private async call(method: string, endpoint: string, requestData?: object,
              handle?: ApiRequestStateHandle<TApiResult>) : Promise<TApiResult> {
     handle?.setLoading(true);
     handle?.setResult(null);

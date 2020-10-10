@@ -1,5 +1,5 @@
 import { assignIfNull, firstUp } from './helper'
-import React, { FunctionComponent, useEffect, useState } from 'react'
+import React, { Dispatch, FunctionComponent, SetStateAction, useEffect, useState } from 'react'
 import {
   ApiLoader,
   ApiLoaderCreateErrorFunction,
@@ -17,12 +17,12 @@ export class ApiClient<TApiResult extends BaseApiResult> {
 
     this.options = options;
 
-    this.get = (endpoint) => this.call("get", endpoint);
+    this.get = (endpoint, stateHandle) => this.call("get", endpoint, undefined, stateHandle);
     this.useGet = (endpoint) => this.useCall("get", endpoint);
 
     ["post", "put", "patch", "delete"].forEach(method => {
-      this[method] = ((endpoint, requestData) =>
-        this.call(method, endpoint, requestData)) as CallFunctionWithBody<TApiResult>;
+      this[method] = ((endpoint, requestData, stateHandle) =>
+        this.call(method, endpoint, requestData, stateHandle)) as CallFunctionWithBody<TApiResult>;
       this["use" + firstUp(method)] = ((endpoint, requestData) =>
         this.useCall(method, endpoint, requestData)) as UseCallFunctionWithBody<TApiResult>;
     })
@@ -75,29 +75,60 @@ export class ApiClient<TApiResult extends BaseApiResult> {
     ] as UseCallFunctionReturnType<TApiResult>;
   }
 
-  async call(method: string, endpoint: string, requestData?: object) : Promise<TApiResult> {
-    try {
-      return await fetch(this.options.baseUrl + endpoint, {
-        method,
-        body: JSON.stringify(requestData),
-        ...this.options.fetchOptions
-      }).then(response => {
-        return response.json().then(data => ({
-          statusCode: response.status,
-          data
-        }))
-      }).then(({ statusCode, data }) => {
-        return Object.assign({
-          data,
-          statusCode
-        }, this.options.responseHandler(data)) as TApiResult
-      })
-    } catch (e) {
+  async call(method: string, endpoint: string, requestData?: object,
+             handle?: ApiRequestStateHandle<TApiResult>) : Promise<TApiResult> {
+    handle?.setLoading(true);
+    handle?.setResult(null);
+
+    return await fetch(this.options.baseUrl + endpoint, {
+      method,
+      body: JSON.stringify(requestData),
+      ...this.options.fetchOptions
+    }).then(response => { // Convert response to json
+      return response.json().then(data => ({
+        statusCode: response.status,
+        data
+      }))
+    }).then(({ statusCode, data }) => { // Create api result using response handler
+      return Object.assign({
+        data,
+        statusCode
+      }, this.options.responseHandler(data)) as TApiResult
+    }).catch(error => { // Handle errors
       return Object.assign({
         data: null
-      }, this.options.errorHandler(e)) as TApiResult;
-    }
+      }, this.options.errorHandler(error)) as TApiResult
+    }).then(result => { // Update handle
+      handle?.setLoading(false)
+      handle?.setResult(result)
+      return result;
+    })
   }
+
+  useRequestState(): ApiRequestState<TApiResult> {
+    const [loading, setLoading] = useState(false);
+    const [result, setResult] = useState<TApiResult | null>(null);
+
+    return {
+      handle: {
+        setLoading,
+        setResult
+      },
+      loading,
+      result
+    };
+  }
+}
+
+export interface ApiRequestState<TApiResult extends BaseApiResult> {
+  handle: ApiRequestStateHandle<TApiResult>,
+  loading: boolean,
+  result: TApiResult | null
+}
+
+export interface ApiRequestStateHandle<TApiResult extends BaseApiResult> {
+  setLoading: Dispatch<SetStateAction<boolean>>
+  setResult: Dispatch<SetStateAction<TApiResult | null>>
 }
 
 export interface ApiClientOptions<TApiResult extends BaseApiResult> {
@@ -112,8 +143,8 @@ export interface ApiClientOptions<TApiResult extends BaseApiResult> {
   fetchOptions?: Partial<RequestInit>
 }
 
-type CallFunctionWithoutBody<TApiResult extends BaseApiResult> = (endpoint: string) => Promise<TApiResult>;
-type CallFunctionWithBody<TApiResult extends BaseApiResult> = (endpoint: string, requestData: object) => Promise<TApiResult>;
+type CallFunctionWithoutBody<TApiResult extends BaseApiResult> = (endpoint: string, stateHandle?: ApiRequestStateHandle<TApiResult>) => Promise<TApiResult>;
+type CallFunctionWithBody<TApiResult extends BaseApiResult> = (endpoint: string, requestData: object, stateHandle?: ApiRequestStateHandle<TApiResult>) => Promise<TApiResult>;
 
 type UseCallFunctionWithoutBody<TApiResult extends BaseApiResult> = (endpoint: string) => UseCallFunctionReturnType<TApiResult>;
 type UseCallFunctionWithBody<TApiResult extends BaseApiResult> = (endpoint: string, requestData: object) => UseCallFunctionReturnType<TApiResult>;

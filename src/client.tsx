@@ -31,7 +31,8 @@ export class ApiClient<TApiResult extends BaseApiResult> {
       const tempProps = {...props}; // This is required because component properties can't be modified
       assignIfNull(tempProps, {
         createLoading: this.options.loaderCreateLoading,
-        createError: this.options.loaderCreateLoading
+        createError: this.options.loaderCreateLoading,
+        ignoreError: false
       } as Partial<ApiLoaderPropsNoClient<TApiResult>>);
 
       return (<ApiLoader client={this} {...tempProps} />)

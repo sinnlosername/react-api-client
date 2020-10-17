@@ -11,6 +11,8 @@ export interface ApiLoaderPropsNoClient<TApiResult extends BaseApiResult> {
 
   createLoading?: ApiLoaderCreateLoadingFunction,
   createError?: ApiLoaderCreateErrorFunction<TApiResult>
+
+  ignoreError?: boolean
 }
 
 export type ApiLoaderCreateLoadingFunction = () => ReactElement<any, any>;
@@ -43,7 +45,7 @@ export function ApiLoader<TApiResult extends BaseApiResult>(props: PropsWithChil
     return props.createLoading?.() ?? (<span>Loading...</span>)
   }
 
-  if (result?.hasError) {
+  if (result?.hasError && !props.ignoreError) {
     return props.createError?.(result) ?? (<span>Error: {result.errorMessage}</span>);
   }
 

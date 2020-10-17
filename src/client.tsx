@@ -28,12 +28,13 @@ export class ApiClient<TApiResult extends BaseApiResult> {
     })
 
     this.Loader = (props: ApiLoaderPropsNoClient<TApiResult>) => {
-      assignIfNull(props, {
+      const tempProps = {...props}; // This is required because component properties can't be modified
+      assignIfNull(tempProps, {
         createLoading: this.options.loaderCreateLoading,
         createError: this.options.loaderCreateLoading
       } as Partial<ApiLoaderPropsNoClient<TApiResult>>);
 
-      return (<ApiLoader client={this} {...props} />)
+      return (<ApiLoader client={this} {...tempProps} />)
     }
   }
 

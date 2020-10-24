@@ -1,5 +1,5 @@
 import { assignIfNull, firstUp } from './helper'
-import React, { Dispatch, FunctionComponent, SetStateAction, useEffect, useState } from 'react'
+import React, { FunctionComponent, useEffect, useState } from 'react'
 import {
   ApiLoader,
   ApiLoaderCreateErrorFunction,
@@ -79,8 +79,7 @@ export class ApiClient<TApiResult extends BaseApiResult> {
 
   private async call(method: string, endpoint: string, requestData?: object,
              handle?: ApiRequestStateHandle<TApiResult>) : Promise<TApiResult> {
-    handle?.setLoading(true);
-    handle?.setResult(null);
+    handle?.startRequest();
 
     return await fetch(this.options.baseUrl + endpoint, {
       method,
@@ -101,23 +100,36 @@ export class ApiClient<TApiResult extends BaseApiResult> {
         data: null
       }, this.options.errorHandler(error)) as TApiResult
     }).then(result => { // Update handle
-      handle?.setLoading(false)
-      handle?.setResult(result)
+      handle?.finishRequest(result);
       return result;
     })
   }
 
-  useRequestState(): ApiRequestState<TApiResult> {
-    const [loading, setLoading] = useState(false);
-    const [result, setResult] = useState<TApiResult | null>(null);
+  useRequestState(resetResultOnRefresh: boolean = true): ApiRequestState<TApiResult> {
+    const [handleState, setHandleState] = useState({
+      loading: false,
+      result: null as TApiResult | null
+    });
+
+    function startRequest() {
+      if (resetResultOnRefresh) {
+        handleState.result = null;
+      }
+      handleState.loading = true;
+      setHandleState({...handleState});
+    }
+
+    function finishRequest(data: TApiResult) {
+      setHandleState({result: data, loading: false});
+    }
 
     return {
       handle: {
-        setLoading,
-        setResult
+        startRequest,
+        finishRequest
       },
-      loading,
-      result
+      loading: handleState.loading,
+      result: handleState.result
     };
   }
 }
@@ -129,8 +141,8 @@ export interface ApiRequestState<TApiResult extends BaseApiResult> {
 }
 
 export interface ApiRequestStateHandle<TApiResult extends BaseApiResult> {
-  setLoading: Dispatch<SetStateAction<boolean>>
-  setResult: Dispatch<SetStateAction<TApiResult | null>>
+  startRequest: () => void
+  finishRequest: (result: TApiResult) => void
 }
 
 export interface ApiClientOptions<TApiResult extends BaseApiResult> {

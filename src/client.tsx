@@ -123,13 +123,18 @@ export class ApiClient<TApiResult extends BaseApiResult> {
       setHandleState({result: data, loading: false});
     }
 
+    function resetHandle() {
+      setHandleState({result: null, loading: false});
+    }
+
     return {
       handle: {
         startRequest,
         finishRequest
       },
       loading: handleState.loading,
-      result: handleState.result
+      result: handleState.result,
+      resetHandle
     };
   }
 }
@@ -138,6 +143,7 @@ export interface ApiRequestState<TApiResult extends BaseApiResult> {
   handle: ApiRequestStateHandle<TApiResult>,
   loading: boolean,
   result: TApiResult | null
+  resetHandle: () => void
 }
 
 export interface ApiRequestStateHandle<TApiResult extends BaseApiResult> {

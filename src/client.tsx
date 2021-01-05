@@ -81,10 +81,18 @@ export class ApiClient<TApiResult extends BaseApiResult> {
              handle?: ApiRequestStateHandle<TApiResult>) : Promise<TApiResult> {
     handle?.startRequest();
 
+    let fetchOptions;
+    if (typeof this.options.fetchOptions === "function") {
+      fetchOptions = this.options.fetchOptions();
+    } else {
+      fetchOptions = this.options.fetchOptions;
+    }
+    console.log(fetchOptions);
+
     return await fetch(this.options.baseUrl + endpoint, {
       method,
       body: JSON.stringify(requestData),
-      ...this.options.fetchOptions
+      ...fetchOptions
     }).then(response => { // Convert response to json
       return response.json().then(data => ({
         statusCode: response.status,
@@ -160,7 +168,7 @@ export interface ApiClientOptions<TApiResult extends BaseApiResult> {
   loaderCreateLoading?: ApiLoaderCreateLoadingFunction,
   loaderCreateError?: ApiLoaderCreateErrorFunction<TApiResult>,
 
-  fetchOptions?: Partial<RequestInit>
+  fetchOptions?: (() => Partial<RequestInit>) | Partial<RequestInit>
 }
 
 type CallFunctionWithoutBody<TApiResult extends BaseApiResult> = (endpoint: string, stateHandle?: ApiRequestStateHandle<TApiResult>) => Promise<TApiResult>;

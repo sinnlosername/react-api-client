@@ -94,14 +94,14 @@ export class ApiClient<TApiResult extends BaseApiResult> {
       ...fetchOptions
     }).then(response => { // Convert response to json
       return response.json().then(data => ({
-        statusCode: response.status,
+        response,
         data
       }))
-    }).then(({ statusCode, data }) => { // Create api result using response handler
+    }).then(({ response, data }) => { // Create api result using response handler
       return Object.assign({
         data,
-        statusCode
-      }, this.options.responseHandler(data)) as TApiResult
+        statusCode: response.status
+      }, this.options.responseHandler(data, response)) as TApiResult
     }).catch(error => { // Handle errors
       return Object.assign({
         data: null
@@ -161,7 +161,7 @@ export interface ApiRequestStateHandle<TApiResult extends BaseApiResult> {
 export interface ApiClientOptions<TApiResult extends BaseApiResult> {
   baseUrl: string
 
-  responseHandler: (data: object) => ApiResultWithoutRaw<TApiResult>
+  responseHandler: (data: object, response: Response) => ApiResultWithoutRaw<TApiResult>
   errorHandler: (error: Error) => ApiResultWithoutRaw<TApiResult>
 
   loaderCreateLoading?: ApiLoaderCreateLoadingFunction,

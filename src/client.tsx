@@ -87,7 +87,6 @@ export class ApiClient<TApiResult extends BaseApiResult> {
     } else {
       fetchOptions = this.options.fetchOptions;
     }
-    console.log(fetchOptions);
 
     return await fetch(this.options.baseUrl + endpoint, {
       method,
